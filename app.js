@@ -2,7 +2,7 @@ console.log("Mi archivo app.js se está ejecutando");
 
 const formulario = document.getElementById("formularioVenta");
 const listaVentas = document.getElementById("listaVentas");
-const URL_API = "http://127.0.0.1:8000";
+const URL_API = "https://miniventas.onrender.com";
 
 // Enviar una venta a Google Sheets
 
