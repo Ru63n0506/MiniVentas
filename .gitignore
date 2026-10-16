@@ -1,0 +1,13 @@
+# Credenciales y secretos
+backend/credentials.json
+.env
+.env.*
+
+# Entorno virtual de Python
+backend/.venv/
+venv/
+.venv/
+
+# Archivos generados por Python
+__pycache__/
+*.pyc
