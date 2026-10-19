@@ -1,10 +1,10 @@
+
 from datetime import datetime
 
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
 
 from sheets import consultar_ventas, guardar_venta
-
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -23,10 +23,12 @@ app.add_middleware(
     allow_headers=["Content-Type"]
 )
 
+
 class Venta(BaseModel):
-    producto: str
-    cantidad: int
-    precio: float
+    id_venta: str = Field(min_length=1)
+    producto: str = Field(min_length=1)
+    cantidad: int = Field(gt=0)
+    precio: float = Field(gt=0)
 
 
 @app.get("/")
@@ -36,22 +38,48 @@ def inicio():
 
 @app.post("/api/ventas")
 def registrar_venta(venta: Venta):
-    total = venta.cantidad * venta.precio
+    try:
+        # Comprobar si la venta ya existe
+        ventas_existentes = consultar_ventas()
 
-    nueva_venta = {
-        "fecha": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        "producto": venta.producto,
-        "cantidad": venta.cantidad,
-        "precio": venta.precio,
-        "total": total
-    }
+        for existente in ventas_existentes:
+            if str(existente.get("id_venta", "")) == venta.id_venta:
+                return {
+                    "mensaje": "La venta ya estaba registrada",
+                    "sincronizada": True,
+                    "venta": existente
+                }
 
-    guardar_venta(nueva_venta)
+        nueva_venta = {
+            "fecha": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            "producto": venta.producto,
+            "cantidad": venta.cantidad,
+            "precio": venta.precio,
+            "total": venta.cantidad * venta.precio,
+            "id_venta": venta.id_venta
+        }
 
-    return {
-        "mensaje": "Venta registrada correctamente",
-        "venta": nueva_venta
-    }
+        guardada = guardar_venta(nueva_venta)
+
+        if not guardada:
+            return {
+                "mensaje": "La venta ya estaba registrada",
+                "sincronizada": True,
+                "venta": nueva_venta
+            }
+
+        return {
+            "mensaje": "Venta registrada correctamente",
+            "sincronizada": True,
+            "venta": nueva_venta
+        }
+
+    except Exception as error:
+        print(f"Error al registrar venta: {error}")
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo guardar la venta en Google Sheets"
+        )
 
 
 @app.get("/api/ventas")
